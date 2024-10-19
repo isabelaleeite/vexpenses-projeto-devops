@@ -31,15 +31,30 @@ resource "aws_instance" "debian_ec2" {
     delete_on_termination = true
   }
 
-  # Script de inicialização
+ # Script de inicialização
   user_data = <<-EOF
               #!/bin/bash
-              apt-get update -y
-              apt-get install -y docker.io
-              systemctl enable docker
-              systemctl start docker
-              usermod -aG docker $USER
-              docker run -p 80:80 -d nginx
+              # Atualiza os repositórios e instala o Docker e o Git
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io git
+
+              # Habilita e inicia o serviço do Docker
+              sudo systemctl start docker
+              sudo systemctl enable docker
+
+              # Clonar o repositório do GitHub
+              git clone https://github.com/isabelaleeite/vexpenses-projeto-devops.git /app
+
+              # Navega até o diretório do repositório clonado
+              cd /app
+
+              # Caso exista um Dockerfile, constrói e executa o contêiner Docker
+              if [ -f Dockerfile ]; then
+                sudo docker build -t vexpenses-app .
+                sudo docker run -d -p 80:80 vexpenses-app
+              else
+                echo "Dockerfile não encontrado. Verifique o repositório."
+              fi
               EOF
 
   tags = {

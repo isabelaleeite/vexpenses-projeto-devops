@@ -21,8 +21,8 @@ Se você já tem o Terraform instalado na sua máquina, siga os passos abaixo:
 
 1. Clone o Repositório:
     ```bash
-    git clone <URL_DO_REPOSITORIO>
-    cd <NOME_DO_DIRETORIO>
+    git clone git@github.com:isabelaleeite/vexpenses-projeto-devops.git
+    cd vexpenses-projeto-devops
     ```
 
 2. Inicialize o Terraform:
