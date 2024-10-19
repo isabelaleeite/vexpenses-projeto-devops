@@ -1,0 +1,5 @@
+# Arquivos que não são necessários
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform/
