@@ -7,6 +7,7 @@ resource "aws_vpc" "main_vpc" {
   tags = {
     Name = "${var.projeto}-${var.candidato}-vpc"
   }
+
 }
 
 # Criação da Subnet pública na VPC 

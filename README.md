@@ -27,8 +27,6 @@ O grupo de segurança funciona como uma "parede de segurança" ao redor da sua i
 
 ## Estrutura do Projeto
 
-Este projeto utiliza Terraform para configurar uma infraestrutura na AWS, incluindo uma VPC, uma sub-rede pública, um gateway de internet, um grupo de segurança e uma instância EC2. Na instância EC2, o Docker é instalado e utilizado para executar um contêiner Nginx, que serve como servidor web.
-
 ```mermaid
 graph TD;
     A[Terraform] --> B[VPC]
@@ -38,11 +36,10 @@ graph TD;
     C --> F[Grupo de Segurança]
     C --> G[Instância EC2]
     F --> G
-    G --> H[Nginx]
     G --> I[Docker]
+    I --> H[Nginx]
     E --> D
 ```
-
 
 
 ## Descrição dos Arquivos
@@ -92,3 +89,6 @@ Use o endereço IP público exibido no output do Terraform para acessar o servid
 ```arduino
 http://<instance_public_ip>
 ```
+## Conclusão
+
+Este projeto demonstra como usar Terraform para configurar uma infraestrutura AWS e implantar o Nginx em uma instância EC2 utilizando Docker. Toda a infraestrutura necessária, incluindo VPC, sub-rede, grupo de segurança e a instância EC2, é criada de maneira automatizada. O Nginx é iniciado dentro de um contêiner Docker, permitindo uma fácil implementação e escalabilidade.

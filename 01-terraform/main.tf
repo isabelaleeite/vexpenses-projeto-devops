@@ -2,7 +2,6 @@ provider "aws" {
   region = "us-east-1"
 }
 
-# Variáveis para o projeto e o nome do candidato
 variable "projeto" {
   description = "Nome do projeto"
   type        = string
@@ -13,6 +12,15 @@ variable "candidato" {
   description = "Nome do candidato"
   type        = string
   default     = "IsabelaLeite"
+}
+
+terraform {
+  backend "s3" {
+    bucket  = "vexpenses-isabela-leite-state-bucket"  
+    key     = "terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
 }
 
 # Geração de chave privada
