@@ -38,35 +38,35 @@ graph TD;
 
 ## Descrição dos Arquivos
 
-README.md
+**README.md**
 
 Documentação do projeto, explicando como configurar e implantar a aplicação Nginx em uma instância EC2 com Docker. O arquivo também orienta sobre a criação do bucket S3 para armazenar o estado remoto do Terraform.
 
-Diretório 00-remote-state-bucket:
+**Diretório 00-remote-state-bucket:**
 
-s3_bucket.tf: Arquivo que define a criação do bucket S3 na AWS, utilizado para armazenar o estado remoto do Terraform. Este arquivo deve ser executado antes da configuração da infraestrutura principal.
+`s3_bucket.tf`: Arquivo que define a criação do bucket S3 na AWS, utilizado para armazenar o estado remoto do Terraform. Este arquivo deve ser executado antes da configuração da infraestrutura principal.
 
-Diretório 01-terraform:
+**Diretório 01-terraform:**
 
-main.tf: Arquivo principal do Terraform que configura o provedor AWS e referencia o bucket S3 para armazenar o estado remoto do Terraform.
+`main.tf`: Arquivo principal do Terraform que configura o provedor AWS e referencia o bucket S3 para armazenar o estado remoto do Terraform.
 
-vpc.tf: Configuração da Virtual Private Cloud (VPC), incluindo a criação de sub-redes, gateway de internet e tabela de roteamento.
+`vpc.tf`: Configuração da Virtual Private Cloud (VPC), incluindo a criação de sub-redes, gateway de internet e tabela de roteamento.
 
-security_group.tf: Define as regras do grupo de segurança, controlando o tráfego de entrada e saída da instância EC2.
+`security_group.tf`: Define as regras do grupo de segurança, controlando o tráfego de entrada e saída da instância EC2.
 
-ec2.tf: Configura a instância EC2, especificando o script de inicialização que instala o Docker e inicia o Nginx dentro de um contêiner Docker.
+`ec2.tf`: Configura a instância EC2, especificando o script de inicialização que instala o Docker e inicia o Nginx dentro de um contêiner Docker.
 
 
 ## Passos para Implantação
 
-Clone o Repositório:
+1. **Clone o Repositório:**
 
 ```bash
 git clone https://github.com/isabelaleeite/vexpenses-projeto-devops.git
 cd vexpenses-projeto-devops
 ```
 
-Crie o Bucket S3 para o Remote State:
+2. **Crie o Bucket S3 para o Remote State:**
 
 Entre na pasta onde o arquivo de configuração do bucket S3 está localizado:
 
@@ -74,24 +74,24 @@ Entre na pasta onde o arquivo de configuração do bucket S3 está localizado:
 cd 00-remote-state-bucket
 ```
 
-Inicialize o Terraform para o bucket S3:
+3. **Inicialize o Terraform para o bucket S3:**
 
 ```bash
 terraform init
 ```
 
-Aplique a configuração para criar o bucket S3:
+4. **Aplique a configuração para criar o bucket S3:**
 
 ```bash
 terraform apply
 ```
-Depois que o bucket S3 for criado, retorne à pasta principal:
+5. **Depois que o bucket S3 for criado, retorne à pasta principal:**
 
 ```bash
 cd ..
 ```
 
-Inicialize a Configuração Principal:
+6. **Inicialize a Configuração Principal:**
 
 Navegue até a pasta principal do Terraform:
 
@@ -99,13 +99,13 @@ Navegue até a pasta principal do Terraform:
 cd 01-terraform
 ```
 
-Inicialize o Terraform:
+7. **Inicialize o Terraform:**
 
 ```bash
 terraform init
 ```
 
-Planeje a Infraestrutura:
+8. **Planeje a Infraestrutura:**
 
 Verifique o plano de infraestrutura que será criado:
 
@@ -113,7 +113,7 @@ Verifique o plano de infraestrutura que será criado:
 terraform plan
 ```
 
-Aplique a Configuração:
+9. **Aplique a Configuração:**
 
 Aplique a configuração para provisionar os recursos:
 
@@ -121,7 +121,7 @@ Aplique a configuração para provisionar os recursos:
 terraform apply
 ```
 
-Acesse o Servidor Nginx:
+10. **Acesse o Servidor Nginx:**
 
 Use o endereço IP público exibido no output do Terraform para acessar o servidor Nginx no navegador:
 
@@ -131,7 +131,7 @@ http://<instance_public_ip>
 
 ## Arquivos de Configuração
 
-s3_bucket.tf
+### `s3_bucket.tf`
 
 ```hcl
 provider "aws" {
@@ -159,10 +159,9 @@ resource "aws_s3_bucket_versioning" "state_bucket_versioning" {
 }
 ```
 
-main.tf
+### `main.tf`
 
 ```hcl
-Copiar código
 provider "aws" {
   region = "us-east-1"
 }
@@ -201,7 +200,7 @@ resource "aws_key_pair" "ec2_key_pair" {
 }
 ```
 
-ec2.tf
+### `ec2.tf`
 
 ```hcl
 # Obtendo a versão mais recente do Debian 12
@@ -264,7 +263,7 @@ output "ec2_public_ip" {
   value       = aws_instance.debian_ec2.public_ip
 }
 ```
-security_group.tf
+### `security_group.tf`
 
 ```hcl
 # Grupo de segurança para a instância EC2
@@ -309,7 +308,7 @@ resource "aws_security_group" "main_sg" {
   }
 }
 ```
-vpc.tf
+### `vpc.tf`
 
  ```hcl
  # Criação da VPC pública
@@ -373,27 +372,11 @@ resource "aws_route_table_association" "main_association" {
 
 Organizei os recursos em diferentes arquivos (s3_bucket.tf, main.tf, ec2.tf, security_group.tf, vpc.tf). Essa modularização melhora a legibilidade e a manutenção do código, permitindo que as configurações de diferentes recursos sejam isoladas e facilitando tanto a compreensão quanto alterações futuras.
 
-2. ### Configuração de Backend no S3 (main.tf)
-Implementei o uso de um backend S3 para armazenar o estado do Terraform:
+2. ### Configuração do Backend S3 e Versionamento do Estado
 
-```hcl
-Copiar código
-terraform {
-  backend "s3" {
-    bucket  = "vexpenses-isabela-leite-state-bucket"
-    key     = "terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
-  }
-}
-```
-O objetivo dessa mudança é gerenciar o estado de forma centralizada e segura. A opção encrypt = true garante que o estado seja criptografado, o que é essencial para proteger informações sensíveis e manter a integridade do estado do ambiente.
+Implementei o uso de um bucket S3 para armazenar o estado do Terraform de forma segura, com versionamento e criptografia:
 
-3. ### Criação do Bucket S3 para Backend e Habilitação de Versionamento (s3_bucket.tf)
-Criei um bucket S3 dedicado para armazenar o estado do Terraform e habilitei o versionamento:
-
-```hcl
-Copiar código
+hcl
 resource "aws_s3_bucket" "state_bucket" {
   bucket = "vexpenses-isabela-leite-state-bucket"
   force_destroy = true
@@ -405,15 +388,23 @@ resource "aws_s3_bucket_versioning" "state_bucket_versioning" {
     status = "Enabled"
   }
 }
-```
 
-Essa modificação permite que o bucket mantenha um histórico das versões do estado, facilitando a recuperação de versões anteriores em caso de problemas, além de garantir um controle mais robusto sobre as mudanças.
+terraform {
+  backend "s3" {
+    bucket  = "vexpenses-isabela-leite-state-bucket"
+    key     = "terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
+}
 
-4. ### Atualização do Script de Inicialização na EC2 (ec2.tf)
+Essa modificação cria um bucket S3 dedicado para armazenar o estado do Terraform de forma centralizada e segura. O versionamento permite que um histórico das versões do estado seja mantido, facilitando a recuperação em caso de problemas, e a criptografia garante a proteção das informações sensíveis.
+
+3. ### Atualização do Script de Inicialização na EC2 (ec2.tf)
+
 Modifiquei o script de inicialização para instalar e configurar o Docker, além de iniciar um contêiner Nginx:
 
 ```bash
-Copiar código
 user_data = <<-EOF
   #!/bin/bash
   sudo apt-get update -y
@@ -426,12 +417,11 @@ EOF
 
 Essa modificação automatiza o provisionamento de um servidor Nginx em um contêiner Docker, configurando a instância EC2 para servir aplicações web de forma automática e padronizada.
 
-5. ### Modificação no Grupo de Segurança (security_group.tf)
+4. ### Modificação no Grupo de Segurança (security_group.tf)
 
 Adicionei uma regra para permitir tráfego HTTP (porta 80):
 
 ```hcl
-Copiar código
 ingress {
   from_port   = 80
   to_port     = 80
@@ -441,11 +431,11 @@ ingress {
 ```
 Essa alteração permite que o servidor Nginx, rodando no contêiner, seja acessível publicamente pela porta 80. Ela é essencial para habilitar o acesso ao serviço web configurado. No entanto, reconheço que essa configuração poderia ser ajustada para restringir o acesso a uma faixa específica de IPs, caso seja necessário aumentar a segurança.
 
-6. ### Atualização das Variáveis (main.tf)
+5. ### Atualização das Variáveis (main.tf)
+
 Atualizei as variáveis projeto e candidato para refletirem o nome do projeto e o meu nome, deixando mais claro que os recursos pertencem a mim:
 
 ```hcl
-Copiar código
 variable "candidato" {
   default = "IsabelaLeite"
 }
