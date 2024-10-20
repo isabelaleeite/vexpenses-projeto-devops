@@ -15,12 +15,6 @@ resource "aws_security_group" "main_sg" {
     ipv6_cidr_blocks = ["::/0"]
   }
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
    # Permitir acesso HTTP para Nginx (porta 80)
 
