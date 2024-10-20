@@ -32,13 +32,13 @@ resource "aws_instance" "debian_ec2" {
   }
 
  # Script de inicialização
-  user_data = <<-EOF
+   user_data = <<-EOF
               #!/bin/bash
-              apt-get update -y
-              apt-get upgrade -y
-              apt-get install -y nginx
-              systemctl start nginx
-              systemctl enable nginx
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo docker run -d -p 80:80 --name nginx-server nginx
               EOF
 
   tags = {
