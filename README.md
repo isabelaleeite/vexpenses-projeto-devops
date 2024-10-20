@@ -35,28 +35,6 @@ graph TD;
     E --> D
 ```
 
-
-## Descrição dos Arquivos
-
-**README.md**
-
-Documentação do projeto, explicando como configurar e implantar a aplicação Nginx em uma instância EC2 com Docker. O arquivo também orienta sobre a criação do bucket S3 para armazenar o estado remoto do Terraform.
-
-**Diretório 00-remote-state-bucket:**
-
-`s3_bucket.tf`: Arquivo que define a criação do bucket S3 na AWS, utilizado para armazenar o estado remoto do Terraform. Este arquivo deve ser executado antes da configuração da infraestrutura principal.
-
-**Diretório 01-terraform:**
-
-`main.tf`: Arquivo principal do Terraform que configura o provedor AWS e referencia o bucket S3 para armazenar o estado remoto do Terraform.
-
-`vpc.tf`: Configuração da Virtual Private Cloud (VPC), incluindo a criação de sub-redes, gateway de internet e tabela de roteamento.
-
-`security_group.tf`: Define as regras do grupo de segurança, controlando o tráfego de entrada e saída da instância EC2.
-
-`ec2.tf`: Configura a instância EC2, especificando o script de inicialização que instala o Docker e inicia o Nginx dentro de um contêiner Docker.
-
-
 ## Passos para Implantação
 
 1. **Clone o Repositório:**
@@ -134,27 +112,28 @@ http://<instance_public_ip>
 ### `s3_bucket.tf`
 
 ```hcl
+# Define o provedor AWS e especifica a região em que os recursos serão criados.
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-1"  # Região onde os recursos da AWS serão provisionados.
 }
 
-# Criação do bucket S3 para o backend
+# Criação do bucket S3 que será utilizado para armazenar o estado do Terraform.
 resource "aws_s3_bucket" "state_bucket" {
-  bucket = "vexpenses-isabela-leite-state-bucket"  # Nome fixo para o bucket
+  bucket = "vexpenses-isabela-leite-state-bucket"  # Nome fixo do bucket S3.
 
   tags = {
-    Name = "vexpenses-isabela-leite-state-bucket"  # Nome fixo para as tags
+    Name = "vexpenses-isabela-leite-state-bucket"  # Tag para identificar o bucket com o mesmo nome.
   }
 
-  force_destroy = true  # Para que o bucket seja excluído mesmo se possuir objetos
+  force_destroy = true  # Permite a exclusão do bucket mesmo se houver objetos armazenados nele.
 }
 
-# Habilitar o versionamento do bucket
+# Configuração para habilitar o versionamento no bucket S3.
 resource "aws_s3_bucket_versioning" "state_bucket_versioning" {
-  bucket = aws_s3_bucket.state_bucket.id
+  bucket = aws_s3_bucket.state_bucket.id  # Referencia o ID do bucket criado anteriormente.
 
   versioning_configuration {
-    status = "Enabled"  
+    status = "Enabled"  # Habilita o versionamento para manter um histórico das versões dos arquivos armazenados.
   }
 }
 ```
@@ -162,82 +141,78 @@ resource "aws_s3_bucket_versioning" "state_bucket_versioning" {
 ### `main.tf`
 
 ```hcl
+# Define o provedor AWS e especifica a região em que os recursos serão criados.
 provider "aws" {
-  region = "us-east-1"
+  region = "us-east-1"  # Região onde os recursos da AWS serão provisionados.
 }
 
+# Variável para o nome do projeto. O valor padrão é "VExpenses".
 variable "projeto" {
-  description = "Nome do projeto"
-  type        = string
-  default     = "VExpenses"
+  description = "Nome do projeto"  # Descrição da variável.
+  type        = string  # Tipo da variável (string).
+  default     = "VExpenses"  # Valor padrão da variável.
 }
 
+# Variável para o nome do candidato. O valor padrão é "IsabelaLeite".
 variable "candidato" {
-  description = "Nome do candidato"
-  type        = string
-  default     = "IsabelaLeite"
+  description = "Nome do candidato"  # Descrição da variável.
+  type        = string  # Tipo da variável (string).
+  default     = "IsabelaLeite"  # Valor padrão da variável.
 }
 
+# Configuração do backend do Terraform para armazenar o estado no S3.
 terraform {
   backend "s3" {
-    bucket  = "vexpenses-isabela-leite-state-bucket"
-    key     = "terraform.tfstate"
-    region  = "us-east-1"
-    encrypt = true
+    bucket  = "vexpenses-isabela-leite-state-bucket"  # Nome do bucket S3 onde o estado será armazenado.
+    key     = "terraform.tfstate"  # Caminho/arquivo do estado no bucket.
+    region  = "us-east-1"  # Região onde o bucket S3 está localizado.
+    encrypt = true  # Ativa a criptografia para proteger os dados do estado.
   }
-}
-
-# Geração de chave privada
-resource "tls_private_key" "ec2_key" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-# Par de chaves para a instância EC2
-resource "aws_key_pair" "ec2_key_pair" {
-  key_name   = "${var.projeto}-${var.candidato}-key"
-  public_key = tls_private_key.ec2_key.public_key_openssh
 }
 ```
 
 ### `ec2.tf`
 
 ```hcl
-# Obtendo a versão mais recente do Debian 12
+# Obtendo a versão mais recente da AMI do Debian 12
 data "aws_ami" "debian12" {
-  most_recent = true
+  most_recent = true  # Garante que a AMI mais recente será selecionada.
 
+  # Filtro para buscar AMIs que tenham "debian-12-amd64-" no nome.
   filter {
     name   = "name"
     values = ["debian-12-amd64-*"]
   }
 
+  # Filtro para selecionar AMIs com tipo de virtualização "hvm".
   filter {
     name   = "virtualization-type"
     values = ["hvm"]
   }
 
+  # ID do proprietário da AMI (neste caso, Debian).
   owners = ["679593333241"]
 }
 
-# Instância EC2 Debian
+# Criação de uma instância EC2 usando a AMI Debian mais recente
 resource "aws_instance" "debian_ec2" {
-  ami             = data.aws_ami.debian12.id
-  instance_type   = "t2.micro"
-  subnet_id       = aws_subnet.main_subnet.id
-  key_name        = aws_key_pair.ec2_key_pair.key_name
-  security_groups = [aws_security_group.main_sg.id]
+  ami             = data.aws_ami.debian12.id  # ID da AMI obtida anteriormente.
+  instance_type   = "t2.micro"  # Tipo da instância (pequena e de baixo custo).
+  subnet_id       = aws_subnet.main_subnet.id  # Subnet onde a instância será criada.
+  key_name        = aws_key_pair.ec2_key_pair.key_name  # Par de chaves para acesso SSH.
+  security_groups = [aws_security_group.main_sg.id]  # Grupo de segurança associado.
 
-  associate_public_ip_address = true
+  associate_public_ip_address = true  # Atribui um IP público à instância.
 
+  # Configuração do volume root da instância.
   root_block_device {
-    volume_size           = 20
-    volume_type           = "gp2"
-    delete_on_termination = true
+    volume_size           = 20  # Tamanho do volume em GB.
+    volume_type           = "gp2"  # Tipo de volume (SSD de uso geral).
+    delete_on_termination = true  # Deleta o volume ao finalizar a instância.
   }
 
- # Script de inicialização
-   user_data = <<-EOF
+  # Script de inicialização (user_data) para instalar e configurar o Docker e o Nginx.
+  user_data = <<-EOF
               #!/bin/bash
               sudo apt-get update -y
               sudo apt-get install -y docker.io
@@ -247,21 +222,23 @@ resource "aws_instance" "debian_ec2" {
               EOF
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-ec2"
+    Name = "${var.projeto}-${var.candidato}-ec2"  # Tag para identificar a instância EC2.
   }
 }
 
-# Outputs sensíveis
+# Output sensível: chave privada para acessar a instância EC2
 output "private_key" {
   description = "Chave privada para acessar a instância EC2"
-  value       = tls_private_key.ec2_key.private_key_pem
-  sensitive   = true
+  value       = tls_private_key.ec2_key.private_key_pem  # Exibe a chave privada.
+  sensitive   = true  # Marca o output como sensível para ocultar em logs.
 }
 
+# Output: Endereço IP público da instância EC2
 output "ec2_public_ip" {
   description = "Endereço IP público da instância EC2"
-  value       = aws_instance.debian_ec2.public_ip
+  value       = aws_instance.debian_ec2.public_ip  # Exibe o IP público da instância.
 }
+
 ```
 ### `security_group.tf`
 
@@ -270,41 +247,41 @@ output "ec2_public_ip" {
 resource "aws_security_group" "main_sg" {
   name        = "${var.projeto}-${var.candidato}-sg"
   description = "Permitir SSH de qualquer lugar e todo o trafego de saida"
-  vpc_id      = aws_vpc.main_vpc.id
+  vpc_id      = aws_vpc.main_vpc.id # ID da VPC onde o grupo de segurança será criado.
 
   # Regras de entrada - SSH de qualquer lugar (porta 22)
 
   ingress {
     description      = "Permitir SSH de qualquer lugar"
-    from_port        = 22
-    to_port          = 22
-    protocol         = "tcp"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    from_port        = 22 # Porta de origem.
+    to_port          = 22 # Porta de destino.
+    protocol         = "tcp"  # Protocolo usado.
+    cidr_blocks      = ["0.0.0.0/0"]  # Permite acesso SSH de qualquer endereço IPv4.
+    ipv6_cidr_blocks = ["::/0"] # Permite acesso SSH de qualquer endereço IPv6.
   }
 
 
-   # Permitir acesso HTTP para Nginx (porta 80)
+  # Regras de entrada - Permitir acesso HTTP para Nginx (porta 80)
 
   ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 80  # Porta de origem para HTTP.
+    to_port     = 80  # Porta de destino para HTTP.
+    protocol    = "tcp"  # Protocolo usado.
+    cidr_blocks = ["0.0.0.0/0"]  # Permite acesso HTTP de qualquer endereço IPv4.
   }
 
   # Regras de saída - Permitir todo o tráfego de saída
   egress {
-    description      = "Permitir todo o trafego de saida"
-    from_port        = 0
-    to_port          = 0
-    protocol         = "-1"
-    cidr_blocks      = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
+    description      = "Permitir todo o tráfego de saída"  # Descrição da regra.
+    from_port        = 0  # Porta de origem (todas).
+    to_port          = 0  # Porta de destino (todas).
+    protocol         = "-1"  # Permite todos os protocolos.
+    cidr_blocks      = ["0.0.0.0/0"]  # Permite tráfego de saída para qualquer endereço IPv4.
+    ipv6_cidr_blocks = ["::/0"]  # Permite tráfego de saída para qualquer endereço IPv6.
   }
 
   tags = {
-    Name = "${var.projeto}-${var.candidato}-sg"
+    Name = "${var.projeto}-${var.candidato}-sg"  # Tag para identificar o grupo de segurança.
   }
 }
 ```
@@ -313,58 +290,57 @@ resource "aws_security_group" "main_sg" {
  ```hcl
  # Criação da VPC pública
 resource "aws_vpc" "main_vpc" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+  cidr_block           = "10.0.0.0/16"                    # Bloco CIDR que define a faixa de IPs da VPC
+  enable_dns_support   = true                              # Habilita suporte a DNS na VPC
+  enable_dns_hostnames = true                              # Habilita nomes de host baseados em DNS
 
+  # Tags para identificação da VPC
   tags = {
-    Name = "${var.projeto}-${var.candidato}-vpc"
+    Name = "${var.projeto}-${var.candidato}-vpc"         # Nome da VPC, combinando o nome do projeto e do candidato
   }
-
 }
 
 # Criação da Subnet pública na VPC 
 resource "aws_subnet" "main_subnet" {
-  vpc_id            = aws_vpc.main_vpc.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
+  vpc_id            = aws_vpc.main_vpc.id                  # ID da VPC onde a subnet será criada
+  cidr_block        = "10.0.1.0/24"                        # Bloco CIDR que define a faixa de IPs da subnet
+  availability_zone = "us-east-1a"                         # Zona de disponibilidade da subnet
 
+  # Tags para identificação da subnet
   tags = {
-    Name = "${var.projeto}-${var.candidato}-subnet"
+    Name = "${var.projeto}-${var.candidato}-subnet"       # Nome da subnet, combinando o nome do projeto e do candidato
   }
 }
 
-# Gateway do Internet Gateway
-
+# Criação do Internet Gateway
 resource "aws_internet_gateway" "main_igw" {
-  vpc_id = aws_vpc.main_vpc.id
+  vpc_id = aws_vpc.main_vpc.id                              # ID da VPC à qual o gateway será associado
 
+  # Tags para identificação do Internet Gateway
   tags = {
-    Name = "${var.projeto}-${var.candidato}-igw"
+    Name = "${var.projeto}-${var.candidato}-igw"          # Nome do Internet Gateway, combinando o nome do projeto e do candidato
   }
 }
 
 # Criação da Tabela de Roteamento
-
 resource "aws_route_table" "main_route_table" {
-  vpc_id = aws_vpc.main_vpc.id
+  vpc_id = aws_vpc.main_vpc.id                              # ID da VPC à qual a tabela de roteamento pertence
 
+  # Definindo a rota padrão para permitir acesso à Internet
   route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.main_igw.id
+    cidr_block = "0.0.0.0/0"                                # Rota para todo o tráfego de saída
+    gateway_id = aws_internet_gateway.main_igw.id         # Gateway associado à rota
   }
 
+  # Tags para identificação da tabela de roteamento
   tags = {
-    Name = "${var.projeto}-${var.candidato}-route_table"
+    Name = "${var.projeto}-${var.candidato}-route_table"   # Nome da tabela de roteamento, combinando o nome do projeto e do candidato
   }
 }
 
 # Associação da tabela de rotas com a subnet
-resource "aws_route_table_association" "main_association" {
-  subnet_id      = aws_subnet.main_subnet.id
-  route_table_id = aws_route_table.main_route_table.id
+resource "aws_route_table_association" "main_associatio
 
-}
 ```
 ## Aplicação de Melhorias
 
@@ -376,7 +352,7 @@ Organizei os recursos em diferentes arquivos (s3_bucket.tf, main.tf, ec2.tf, sec
 
 Implementei o uso de um bucket S3 para armazenar o estado do Terraform de forma segura, com versionamento e criptografia:
 
-hcl
+```hcl
 resource "aws_s3_bucket" "state_bucket" {
   bucket = "vexpenses-isabela-leite-state-bucket"
   force_destroy = true
@@ -397,6 +373,7 @@ terraform {
     encrypt = true
   }
 }
+```
 
 Essa modificação cria um bucket S3 dedicado para armazenar o estado do Terraform de forma centralizada e segura. O versionamento permite que um histórico das versões do estado seja mantido, facilitando a recuperação em caso de problemas, e a criptografia garante a proteção das informações sensíveis.
 
